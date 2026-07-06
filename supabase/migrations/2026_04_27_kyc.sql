@@ -110,7 +110,7 @@ create trigger trg_kyc_updated before update on public.kyc_submissions
 -- Trigger: sincronizar profiles.kyc_status con la última submission
 -- =====================================================================
 create or replace function public.sync_profile_kyc_status()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
     update public.profiles
     set kyc_status = new.status
