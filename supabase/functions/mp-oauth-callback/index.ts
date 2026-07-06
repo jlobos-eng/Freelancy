@@ -8,13 +8,14 @@
 //   1. Validar JWT del caller (debe ser un usuario autenticado).
 //   2. Validar que state === auth.uid() (anti-CSRF).
 //   3. Hacer exchange code → tokens contra /oauth/token de MP.
-//   4. Guardar mp_user_id, mp_access_token, mp_refresh_token,
-//      mp_token_expires_at, mp_onboarded_at en profiles.
+//   4. Guardar tokens sensibles en `mp_credentials` (tabla solo service_role)
+//      y datos no secretos (mp_user_id, mp_onboarded_at) en `profiles`.
 //   5. Devolver { ok: true, mp_user_id }.
 //
-// IMPORTANTE: el access_token de MP NUNCA debe filtrarse al frontend.
-// Sólo guardamos en profiles (que tiene RLS para que el usuario no lo lea
-// directo) y exponemos mp_user_id + mp_onboarded_at vía profiles_safe.
+// IMPORTANTE: el access_token / refresh_token de MP NUNCA deben filtrarse al
+// frontend. Viven en `mp_credentials`, que tiene RLS habilitado y SIN políticas
+// para authenticated/anon → solo esta edge function (service_role) los toca.
+// (Migración 2026_04_30_mp_credentials.sql — cierre del hallazgo C6.)
 
 import { handleCors, corsHeaders } from '../_shared/cors.ts';
 import { getSupabaseAdmin, getSupabaseUser } from '../_shared/supabaseAdmin.ts';
@@ -70,22 +71,40 @@ Deno.serve(async (req: Request) => {
 
         const expiresAt = new Date(Date.now() + (tokenResponse.expires_in || 21600) * 1000).toISOString();
 
-        // 5) Guardar en profiles (con admin para bypass RLS sobre los campos sensibles)
+        // 5) Guardar credenciales. Los TOKENS sensibles van a `mp_credentials`
+        //    (tabla con RLS sin políticas → solo service_role la lee/escribe).
+        //    En `profiles` solo dejamos datos no secretos: mp_user_id
+        //    (collector_id, lo usa el frontend) y mp_onboarded_at.
         const admin = getSupabaseAdmin();
+
+        // 5a) Tokens sensibles → mp_credentials (upsert por user_id)
+        const { error: credErr } = await admin
+            .from('mp_credentials')
+            .upsert({
+                user_id: user.id,
+                mp_access_token: tokenResponse.access_token,
+                mp_refresh_token: tokenResponse.refresh_token,
+                mp_token_expires_at: expiresAt,
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+
+        if (credErr) {
+            console.error('[mp-oauth-callback] mp_credentials upsert failed:', credErr);
+            return jsonResponse({ error: 'Failed to save MP credentials' }, 500);
+        }
+
+        // 5b) Datos no secretos → profiles
         const { error: updateErr } = await admin
             .from('profiles')
             .update({
                 mp_user_id: String(tokenResponse.user_id),
-                mp_access_token: tokenResponse.access_token,
-                mp_refresh_token: tokenResponse.refresh_token,
-                mp_token_expires_at: expiresAt,
                 mp_onboarded_at: new Date().toISOString(),
             })
             .eq('id', user.id);
 
         if (updateErr) {
             console.error('[mp-oauth-callback] profile update failed:', updateErr);
-            return jsonResponse({ error: 'Failed to save MP credentials' }, 500);
+            return jsonResponse({ error: 'Failed to save MP profile data' }, 500);
         }
 
         // 6) Notificación amigable al usuario
