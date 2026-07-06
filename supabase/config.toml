@@ -1,0 +1,21 @@
+# Configuración local de Supabase CLI
+# `supabase link` y `supabase functions deploy` usan estos valores.
+#
+# Crítico: el webhook NO debe verificar JWT (MP no manda JWT, autenticamos via x-signature).
+
+project_id = "freelancyapp"
+
+[functions.create-mp-preference]
+verify_jwt = true
+
+[functions.release-mp-payment]
+verify_jwt = true
+
+[functions.mp-webhook]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = true
+
+[functions.mp-oauth-callback]
+verify_jwt = true

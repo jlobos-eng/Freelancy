@@ -1,0 +1,4 @@
+/* App.css — vacío intencionalmente.
+ * Toda la app estiliza con Tailwind. Si necesitas CSS global, agrégalo a src/index.css
+ * dentro de @layer base/components/utilities según corresponda.
+ */

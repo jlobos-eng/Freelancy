@@ -1,0 +1,34 @@
+{
+    "name": "Freelancy — Confianza líquida",
+    "short_name": "Freelancy",
+    "description": "Encuentra Lancys cerca tuyo o publica trabajos con pago protegido.",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#ffffff",
+    "theme_color": "#4f46e5",
+    "lang": "es-CL",
+    "categories": ["business", "productivity", "lifestyle"],
+    "icons": [
+        {
+            "src": "/favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Publicar un trabajo",
+            "short_name": "Publicar",
+            "url": "/?action=publish",
+            "description": "Publica un nuevo gig"
+        },
+        {
+            "name": "Ver postulaciones",
+            "short_name": "Postulaciones",
+            "url": "/?tab=dashboard"
+        }
+    ]
+}
