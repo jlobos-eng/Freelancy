@@ -4,6 +4,16 @@ import './index.css';
 import Root from './Root.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
+import { initMonitoring, reportError } from './services/monitoring.js';
+
+// Monitoreo de errores (Sentry). Inerte si no hay VITE_SENTRY_DSN.
+initMonitoring();
+
+// Capturar errores no atrapados por React (promesas rechazadas y errores globales).
+if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', (e) => reportError(e.reason, { kind: 'unhandledrejection' }));
+    window.addEventListener('error', (e) => reportError(e.error ?? e.message, { kind: 'window.error' }));
+}
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>

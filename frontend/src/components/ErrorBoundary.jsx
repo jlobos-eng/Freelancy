@@ -3,6 +3,7 @@
 
 import { Component } from 'react';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
+import { reportError } from '../services/monitoring.js';
 
 export default class ErrorBoundary extends Component {
     constructor(props) {
@@ -15,8 +16,8 @@ export default class ErrorBoundary extends Component {
     }
 
     componentDidCatch(error, info) {
-        // En producción, mandar a Sentry / Logflare aquí
-        console.error('🔥 ErrorBoundary atrapó:', error, info);
+        // Reporta a Sentry si hay DSN; si no, a consola. (services/monitoring.js)
+        reportError(error, { boundary: true, componentStack: info?.componentStack });
     }
 
     handleReset = () => {
