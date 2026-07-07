@@ -101,7 +101,10 @@ export default function App() {
         try { window.localStorage.setItem('freelancy-settings', JSON.stringify(appSettings)); } catch { /* ignore */ }
     }, [appSettings]);
 
-    const [mapRadiusKm, setMapRadiusKm] = useState(5);
+    // Default 10 km: con 5 km el mapa aparecía vacío para usuarios cuyos Lancys
+    // cercanos están en comunas a >5 km. 10 km da un radio urbano razonable
+    // que muestra resultados de entrada.
+    const [mapRadiusKm, setMapRadiusKm] = useState(10);
     // Trust & Safety: filtro "sólo verificados" en el dashboard del cliente
     const [verifiedOnly, setVerifiedOnly] = useState(false);
     const [isSharingLocation, setIsSharingLocation] = useState(false);
