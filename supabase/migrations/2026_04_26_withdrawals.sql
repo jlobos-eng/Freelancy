@@ -60,7 +60,10 @@ grant select on public.cl_banks to authenticated;
 -- 2) Validador de RUT chileno (módulo 11)
 --    Acepta formato '12345678-9' o '12345678-K', devuelve true/false.
 -- =====================================================================
-create or replace function public.is_valid_rut(rut text)
+-- NOTA: el parámetro se llama p_rut para coincidir con la definición de la
+-- migración de KYC (2026_04_27). Si difirieran, `create or replace` fallaría
+-- con "cannot change name of input parameter" según el orden de aplicación.
+create or replace function public.is_valid_rut(p_rut text)
 returns boolean
 language plpgsql
 immutable
@@ -75,9 +78,9 @@ declare
     v_digit int;
     v_remainder int;
 begin
-    if rut is null then return false; end if;
+    if p_rut is null then return false; end if;
     -- Sacar puntos, espacios, mayúsculas
-    v_clean := upper(regexp_replace(rut, '[^0-9K]', '', 'g'));
+    v_clean := upper(regexp_replace(p_rut, '[^0-9K]', '', 'g'));
     if length(v_clean) < 2 then return false; end if;
     v_body := substring(v_clean from 1 for length(v_clean) - 1);
     v_dv := substring(v_clean from length(v_clean));
@@ -151,19 +154,19 @@ alter table public.bank_accounts enable row level security;
 
 drop policy if exists "bank_accounts_select_own" on public.bank_accounts;
 create policy "bank_accounts_select_own" on public.bank_accounts for select
-    to authenticated using (user_id = auth.uid());
+    to authenticated using (user_id = (select auth.uid()));
 
 drop policy if exists "bank_accounts_insert_own" on public.bank_accounts;
 create policy "bank_accounts_insert_own" on public.bank_accounts for insert
-    to authenticated with check (user_id = auth.uid());
+    to authenticated with check (user_id = (select auth.uid()));
 
 drop policy if exists "bank_accounts_update_own" on public.bank_accounts;
 create policy "bank_accounts_update_own" on public.bank_accounts for update
-    to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+    to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
 drop policy if exists "bank_accounts_delete_own" on public.bank_accounts;
 create policy "bank_accounts_delete_own" on public.bank_accounts for delete
-    to authenticated using (user_id = auth.uid());
+    to authenticated using (user_id = (select auth.uid()));
 
 -- Trigger: si insertan/actualizan con is_primary=true, des-marcar las demás
 create or replace function public.enforce_single_primary_bank_account()
@@ -238,7 +241,7 @@ alter table public.withdrawals enable row level security;
 
 drop policy if exists "withdrawals_select_own" on public.withdrawals;
 create policy "withdrawals_select_own" on public.withdrawals for select
-    to authenticated using (user_id = auth.uid());
+    to authenticated using (user_id = (select auth.uid()));
 
 -- =====================================================================
 -- 5) Vista wallet_balance v2 — ahora descuenta retiros del available
@@ -290,6 +293,7 @@ create or replace function public.request_withdrawal(
 returns uuid
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
     v_user_id uuid := auth.uid();
@@ -376,6 +380,7 @@ create or replace function public.simulate_process_withdrawal(
 returns text
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare
     v_w record;
@@ -421,6 +426,7 @@ create or replace function public.cancel_withdrawal(p_withdrawal_id uuid)
 returns void
 language plpgsql
 security definer
+set search_path = public
 as $$
 declare v_w record;
 begin
