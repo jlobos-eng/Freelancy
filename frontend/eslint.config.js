@@ -4,7 +4,8 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', 'node_modules'] },
+  // src/types/database.types.ts es autogenerado por Supabase (supabase gen types) — no se lintea.
+  { ignores: ['dist', 'node_modules', 'src/types/**'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
